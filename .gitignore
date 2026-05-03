@@ -22,7 +22,6 @@
 
 # misc
 .DS_Store
-*.pem
 
 # debug
 npm-debug.log*
@@ -30,8 +29,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — TODOS los .env se ignoran excepto .env.example
 .env*
+!.env.example
+
+# keys, certificados y credenciales
+*.pem
+*.p8
+*.key
+*.pfx
+credentials*.json
+service-account*.json
+*-secrets*.json
 
 # vercel
 .vercel
@@ -39,3 +48,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase local
+supabase/.temp/
+supabase/config.toml
+
+# archivos de contexto del asistente — no son parte del código de la app
+AGENTS.md
+PLAN-MEJORAS.md
+opencode.jsonc
+skills-lock.json
+docs/mapa-mejoras.md
+docs/plan-deploy-mejoras.md
+
+# skills y config de agentes — específicos del entorno local
+.agents/
+.claude/
