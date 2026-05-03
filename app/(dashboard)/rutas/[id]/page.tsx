@@ -51,6 +51,8 @@ export default async function RutaDetailPage({ params }: { params: Promise<{ id:
 
       <RutaDetalle
         rutaId={ruta.id_ruta}
+        rutaNombre={ruta.nombre ?? 'Ruta sin nombre'}
+        rutaFecha={ruta.fecha ?? ''}
         estado={ruta.estado}
         pedidos={pedidos as Parameters<typeof RutaDetalle>[0]['pedidos']}
         produccion={produccion}

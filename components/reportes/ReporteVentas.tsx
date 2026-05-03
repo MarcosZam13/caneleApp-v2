@@ -5,6 +5,9 @@ import { TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { ExportarPDFButton } from '@/components/reportes/ExportarPDFButton'
+import { ExportarCSVButton } from '@/components/reportes/ExportarCSVButton'
+import { ReporteVentasPDF } from '@/components/reportes/pdf/ReporteVentasPDF'
 
 type Ruta = {
   id_ruta: string
@@ -26,6 +29,22 @@ export function ReporteVentas({ rutas }: ReporteVentasProps) {
     ? rutasCompletadas.reduce((acc, r) => acc + Number(r.total_venta ?? 0), 0) / rutasCompletadas.length
     : 0
 
+  const pdfData = rutas.map(r => ({
+    nombre: r.nombre ?? '—',
+    fecha: r.fecha ?? '',
+    total_pedidos: r.total_pedidos ?? 0,
+    total_venta: Number(r.total_venta ?? 0),
+    estado: r.estado ?? 'pendiente',
+  }))
+
+  const csvHeaders = [
+    { key: 'nombre', label: 'Ruta' },
+    { key: 'fecha', label: 'Fecha' },
+    { key: 'total_pedidos', label: 'Pedidos' },
+    { key: 'total_venta', label: 'Ventas' },
+    { key: 'estado', label: 'Estado' },
+  ]
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -46,6 +65,17 @@ export function ReporteVentas({ rutas }: ReporteVentasProps) {
               <span className="font-medium ml-1">₡{Math.round(promedioVenta).toLocaleString('es-CR')}</span>
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <ExportarPDFButton
+            pdfDocument={<ReporteVentasPDF rutas={pdfData} />}
+            fileName="reporte-ventas.pdf"
+          />
+          <ExportarCSVButton
+            data={pdfData}
+            fileName="reporte-ventas"
+            headers={csvHeaders}
+          />
         </div>
       </CardHeader>
       <CardContent>

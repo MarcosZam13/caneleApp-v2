@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2, Circle, Wallet, UtensilsCrossed, TrendingUp, Package, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Circle, Wallet, UtensilsCrossed, TrendingUp, Package, ChevronRight, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { ExportarPDFButton } from '@/components/reportes/ExportarPDFButton'
+import { ResumenRutaPDF } from '@/components/reportes/pdf/ResumenRutaPDF'
 import { marcarPedidoEntregado, marcarPedidoPagado, updateRutaEstado } from '@/actions/rutas.actions'
 
 type PedidoItem = {
@@ -45,6 +47,8 @@ type ProduccionItem = {
 
 interface RutaDetalleProps {
   rutaId: string
+  rutaNombre: string
+  rutaFecha: string
   estado: string | null
   pedidos: PedidoItem[]
   produccion: ProduccionItem[]
@@ -55,6 +59,8 @@ interface RutaDetalleProps {
 
 export function RutaDetalle({
   rutaId,
+  rutaNombre,
+  rutaFecha,
   estado,
   pedidos,
   produccion,
@@ -68,6 +74,14 @@ export function RutaDetalle({
 
   const entregados = pedidos.filter(p => p.entregado).length
   const progreso = pedidos.length > 0 ? Math.round((entregados / pedidos.length) * 100) : 0
+
+  const resumenData = pedidos.map((p, idx) => ({
+    cliente_nombre: p.cliente?.nombre ?? 'Cliente desconocido',
+    direccion: p.direccion?.direccion_texto ?? 'Sin dirección',
+    total: Number(p.total ?? 0),
+    items: p.pedido_producto.map(item => `${item.cantidad}x ${item.producto?.nombre ?? '—'}`),
+    notas: p.notas,
+  }))
 
   // Índice del estado actual para el indicador de ciclo de vida
   const estadosPasos = ['pendiente', 'en_curso', 'completada']
@@ -99,6 +113,19 @@ export function RutaDetalle({
   return (
     <div className="space-y-6">
       {/* Resumen de ingresos + progreso */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{rutaNombre}</h2>
+        <ExportarPDFButton
+          pdfDocument={
+            <ResumenRutaPDF
+              ruta={{ nombre: rutaNombre, fecha: rutaFecha }}
+              pedidos={resumenData}
+              totalIngresos={totalIngresos}
+            />
+          }
+          fileName={`ruta-${rutaNombre.toLowerCase().replace(/\s+/g, '-')}.pdf`}
+        />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4">

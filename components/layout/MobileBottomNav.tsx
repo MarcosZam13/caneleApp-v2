@@ -20,7 +20,7 @@ const bottomNavItems = [
   { title: 'Más', href: '/productos', icon: Package },
 ]
 
-export function MobileBottomNav() {
+export function MobileBottomNav({ morososCount = 0 }: { morososCount?: number }) {
   const pathname = usePathname()
 
   // Muestra solo en las rutas principales que el usuario frecuenta

@@ -2,6 +2,7 @@
 import { Package } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { ExportarCSVButton } from '@/components/reportes/ExportarCSVButton'
 
 type ProductoTop = {
   nombre: string
@@ -17,6 +18,12 @@ interface ReporteProductosProps {
 export function ReporteProductos({ productos }: ReporteProductosProps) {
   const maxTotal = productos[0]?.total ?? 1
 
+  const csvHeaders = [
+    { key: 'nombre', label: 'Producto' },
+    { key: 'total', label: 'Unidades' },
+    { key: 'pedidos', label: 'Pedidos' },
+  ]
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -24,6 +31,11 @@ export function ReporteProductos({ productos }: ReporteProductosProps) {
           <Package className="h-4 w-4 text-primary" />
           Productos más pedidos (top 10)
         </CardTitle>
+        <ExportarCSVButton
+          data={productos}
+          fileName="reporte-productos"
+          headers={csvHeaders}
+        />
       </CardHeader>
       <CardContent>
         {productos.length === 0 ? (

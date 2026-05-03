@@ -102,6 +102,7 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
   const [idDireccion, setIdDireccion] = useState('')
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [notas, setNotas] = useState('')
+  const [prioritaria, setPrioritaria] = useState(false)
   const [items, setItems] = useState<ItemForm[]>([emptyItem()])
 
   // Search states para cliente y ruta
@@ -162,6 +163,7 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
     setIdDireccion('')
     setFecha(format(new Date(), 'yyyy-MM-dd'))
     setNotas('')
+    setPrioritaria(false)
     setItems([emptyItem()])
     setDirecciones([])
     setProductos([])
@@ -243,6 +245,7 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
         id_direccion: idDireccion || null,
         fecha,
         notas: notas || null,
+        prioritaria,
         items: validItems.map(({ id_producto, cantidad, rebanado, cuadrado, precio_unitario }) => ({
           id_producto, cantidad, rebanado, cuadrado, precio_unitario,
         })),
@@ -621,6 +624,14 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
                 <div className="space-y-1.5">
                   <Label htmlFor="notas" className="text-xs">Notas</Label>
                   <textarea id="notas" className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none disabled:opacity-50" placeholder="Instrucciones especiales, hora de entrega..." value={notas} onChange={e => setNotas(e.target.value)} />
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Switch size="sm" checked={prioritaria} onCheckedChange={setPrioritaria} />
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Entrega prioritaria</Label>
+                    <p className="text-[11px] text-muted-foreground">Marcar como urgente para que aparezca primero en faltantes</p>
+                  </div>
                 </div>
               </div>
             )}

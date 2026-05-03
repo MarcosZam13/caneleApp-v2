@@ -15,6 +15,7 @@ import {
   Map,
   ChevronRight,
   LogOut,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { logout } from '@/actions/auth.actions'
 
@@ -43,6 +45,7 @@ const navItems = [
     items: [
       { title: 'Rutas', href: '/rutas', icon: MapPin },
       { title: 'Pedidos', href: '/pedidos', icon: ShoppingBag },
+      { title: 'Faltantes', href: '/faltantes', icon: AlertTriangle },
       { title: 'Mapa', href: '/mapa', icon: Map },
     ],
   },
@@ -63,7 +66,7 @@ const navItems = [
   },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({ morososCount = 0 }: { morososCount?: number }) {
   const pathname = usePathname()
 
   return (
@@ -110,7 +113,12 @@ export function AppSidebar() {
                         <Link href={item.href}>
                           <item.icon className="shrink-0" />
                           <span>{item.title}</span>
-                          {isActive && (
+                          {item.title === 'Pagos' && morososCount > 0 && (
+                            <Badge variant="destructive" className="ml-auto text-[10px] h-4 px-1 min-w-5 flex items-center justify-center group-data-[collapsible=icon]:hidden">
+                              {morososCount}
+                            </Badge>
+                          )}
+                          {isActive && item.title !== 'Pagos' && (
                             <ChevronRight className="ml-auto h-3 w-3 opacity-50 group-data-[collapsible=icon]:hidden" />
                           )}
                         </Link>

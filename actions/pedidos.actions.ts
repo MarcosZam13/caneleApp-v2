@@ -24,6 +24,7 @@ const crearPedidoSchema = z.object({
   id_direccion: z.string().uuid().optional().nullable(),
   fecha: z.string().min(1),
   notas: z.string().optional().nullable(),
+  prioritaria: z.boolean().default(false),
   items: z.array(pedidoItemSchema).min(1, 'Agrega al menos un producto'),
 })
 
@@ -118,7 +119,7 @@ export async function crearPedido(formData: unknown): Promise<ActionResult<Pedid
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { id_cliente, id_ruta, id_direccion, fecha, notas, items } = parsed.data
+  const { id_cliente, id_ruta, id_direccion, fecha, notas, prioritaria, items } = parsed.data
 
   // Calcula el total del pedido sumando sub_totales
   const total = items.reduce((acc, item) => acc + item.cantidad * item.precio_unitario, 0)
@@ -135,6 +136,7 @@ export async function crearPedido(formData: unknown): Promise<ActionResult<Pedid
       total,
       pagado: false,
       entregado: false,
+      prioritaria: prioritaria ?? false,
     })
     .select()
     .single()
@@ -203,6 +205,7 @@ export async function marcarEntregado(id: string): Promise<ActionResult> {
   const { error } = await supabase.from('pedido').update({ entregado: true }).eq('id_pedido', id)
   if (error) return { success: false, error: 'Error al marcar como entregado' }
   revalidatePath('/pedidos')
+  revalidatePath('/faltantes')
   return { success: true }
 }
 

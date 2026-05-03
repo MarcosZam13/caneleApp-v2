@@ -186,6 +186,7 @@ export type Database = {
           id_ruta: string | null
           notas: string | null
           pagado: boolean | null
+          prioritaria: boolean | null
           total: number | null
         }
         Insert: {
@@ -198,6 +199,7 @@ export type Database = {
           id_ruta?: string | null
           notas?: string | null
           pagado?: boolean | null
+          prioritaria?: boolean | null
           total?: number | null
         }
         Update: {
@@ -210,6 +212,7 @@ export type Database = {
           id_ruta?: string | null
           notas?: string | null
           pagado?: boolean | null
+          prioritaria?: boolean | null
           total?: number | null
         }
         Relationships: [
@@ -382,7 +385,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vista_balance_cliente: {
+        Row: {
+          id_cliente: string
+          nombre: string
+          total_pedidos: number
+          total_pagado: number
+          balance: number
+        }
+      }
+      vista_morosos: {
+        Row: {
+          id_pedido: string
+          id_cliente: string
+          cliente_nombre: string
+          total: number
+          fecha: string | null
+          entregado: boolean | null
+          pagado: boolean | null
+          prioritaria: boolean | null
+          total_abonado: number
+          deuda_restante: number
+          dias_atraso: number
+        }
+      }
     }
     Functions: {
       [_ in never]: never
@@ -416,4 +442,27 @@ export interface ClienteConBalance extends Cliente {
 export interface PedidoConCliente extends Pedido {
   cliente: Pick<Cliente, 'nombre' | 'telefono'> | null
   direccion: Pick<Direccion, 'direccion_texto' | 'lat' | 'lng'> | null
+  ruta: Pick<Ruta, 'nombre'> | null
+}
+
+export type VistaBalanceCliente = {
+  id_cliente: string
+  nombre: string
+  total_pedidos: number
+  total_pagado: number
+  balance: number
+}
+
+export type VistaMorosos = {
+  id_pedido: string
+  id_cliente: string
+  cliente_nombre: string
+  total: number
+  fecha: string | null
+  entregado: boolean | null
+  pagado: boolean | null
+  prioritaria: boolean | null
+  total_abonado: number
+  deuda_restante: number
+  dias_atraso: number
 }

@@ -39,6 +39,18 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
 
   const totalComprado = pedidos.reduce((acc, p) => acc + Number(p.total ?? 0), 0)
 
+  const diasAtrasoMax = pedidosMorosos.reduce((max, p) => {
+    if (!p.fecha) return max
+    const dias = Math.floor((Date.now() - new Date(p.fecha + 'T12:00:00').getTime()) / (1000 * 60 * 60 * 24))
+    return Math.max(max, dias)
+  }, 0)
+
+  function getDeudaVariant(dias: number) {
+    if (dias <= 7) return 'bg-amber-50 border-amber-200 text-amber-800'
+    if (dias <= 30) return 'bg-orange-50 border-orange-300 text-orange-800'
+    return 'bg-red-50 border-red-300 text-red-800'
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Navegación */}
@@ -75,9 +87,19 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
         {/* Acciones: editar cliente y alerta de deuda */}
         <div className="flex items-center gap-3 shrink-0">
           {deuda > 0 && (
-            <div className="flex items-center gap-2 bg-destructive/10 text-destructive px-4 py-2 rounded-lg text-sm font-medium">
-              <AlertCircle className="h-4 w-4" />
-              Deuda: ₡{deuda.toLocaleString('es-CR')}
+            <div className={`flex flex-col items-start gap-0.5 border rounded-lg px-4 py-2 text-sm font-medium ${getDeudaVariant(diasAtrasoMax)}`}>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Deuda: ₡{deuda.toLocaleString('es-CR')}
+              </div>
+              {diasAtrasoMax > 30 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">
+                  Recordatorio: {diasAtrasoMax} días
+                </span>
+              )}
+              {diasAtrasoMax > 0 && diasAtrasoMax <= 30 && (
+                <span className="text-xs opacity-70">{diasAtrasoMax} días de atraso</span>
+              )}
             </div>
           )}
           <ClienteAbonoButton

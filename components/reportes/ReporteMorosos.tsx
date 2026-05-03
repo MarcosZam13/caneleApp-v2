@@ -5,6 +5,9 @@ import { AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ExportarPDFButton } from '@/components/reportes/ExportarPDFButton'
+import { ExportarCSVButton } from '@/components/reportes/ExportarCSVButton'
+import { ReporteMorososPDF } from '@/components/reportes/pdf/ReporteMorososPDF'
 
 type Moroso = {
   id_pedido: string
@@ -12,6 +15,8 @@ type Moroso = {
   fecha: string | null
   notas: string | null
   cliente: { id_cliente: string; nombre: string; telefono: string | null } | null
+  dias_atraso?: number
+  deuda_restante?: number
 }
 
 interface ReporteMorososProps {
@@ -32,6 +37,21 @@ export function ReporteMorosos({ morosos }: ReporteMorososProps) {
     return 'bg-red-50 text-red-700 border-red-200'
   }
 
+  const pdfData = morosos.map(m => ({
+    id_pedido: m.id_pedido,
+    cliente_nombre: m.cliente?.nombre ?? '—',
+    total: Number(m.total ?? 0),
+    fecha: m.fecha ?? '',
+    dias_atraso: m.dias_atraso ?? getDiasVencido(m.fecha),
+  }))
+
+  const csvHeaders = [
+    { key: 'cliente_nombre', label: 'Cliente' },
+    { key: 'total', label: 'Monto' },
+    { key: 'fecha', label: 'Fecha' },
+    { key: 'dias_atraso', label: 'Días atraso' },
+  ]
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -45,6 +65,17 @@ export function ReporteMorosos({ morosos }: ReporteMorososProps) {
               ₡{totalDeuda.toLocaleString('es-CR')} total
             </span>
           )}
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <ExportarPDFButton
+            pdfDocument={<ReporteMorososPDF morosos={pdfData} />}
+            fileName="reporte-morosos.pdf"
+          />
+          <ExportarCSVButton
+            data={pdfData}
+            fileName="reporte-morosos"
+            headers={csvHeaders}
+          />
         </div>
       </CardHeader>
       <CardContent>

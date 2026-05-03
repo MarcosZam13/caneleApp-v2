@@ -16,84 +16,22 @@ const abonoSchema = z.object({
   metodo: z.enum(['efectivo', 'sinpe', 'transferencia', 'otro']),
 })
 
-// Obtiene todos los clientes con deuda, incluyendo su historial de abonos
+// Obtiene todos los clientes con deuda usando la vista de balance
 export async function getClientesConDeuda() {
   const supabase = await createClient()
 
-  // Pedidos entregados y no pagados (deuda bruta)
-  const { data: pedidosMorosos } = await supabase
-    .from('pedido')
-    .select(`
-      id_pedido, total, fecha, notas,
-      cliente:id_cliente (id_cliente, nombre, telefono)
-    `)
-    .eq('entregado', true)
-    .eq('pagado', false)
-    .order('fecha', { ascending: true })
+  const { data: balances } = await supabase
+    .from('vista_balance_cliente')
+    .select('*')
+    .order('balance', { ascending: false })
 
-  // Abonos registrados (pagos parciales)
-  const { data: abonos } = await supabase
-    .from('pago')
-    .select('id_pago, id_pedido, id_cliente, monto, metodo, fecha')
-    .order('fecha', { ascending: false })
-
-  // Agrupa la deuda neta por cliente
-  const abonosPorPedido = new Map<string, number>()
-  for (const abono of abonos ?? []) {
-    if (!abono.id_pedido) continue
-    const current = abonosPorPedido.get(abono.id_pedido) ?? 0
-    abonosPorPedido.set(abono.id_pedido, current + Number(abono.monto))
-  }
-
-  type ClienteDeuda = {
-    id_cliente: string
-    nombre: string
-    telefono: string | null
-    deuda_total: number
-    pedidos_morosos: {
-      id_pedido: string
-      total: number
-      abonado: number
-      pendiente: number
-      fecha: string | null
-      notas: string | null
-    }[]
-  }
-
-  const clienteMap = new Map<string, ClienteDeuda>()
-
-  for (const pedido of pedidosMorosos ?? []) {
-    const cliente = Array.isArray(pedido.cliente) ? pedido.cliente[0] : pedido.cliente
-    if (!cliente) continue
-
-    const abonado = abonosPorPedido.get(pedido.id_pedido) ?? 0
-    const pendiente = Number(pedido.total ?? 0) - abonado
-
-    // Solo incluye si aún tiene pendiente real
-    if (pendiente <= 0) continue
-
-    const existing: ClienteDeuda = clienteMap.get(cliente.id_cliente) ?? {
-      id_cliente: cliente.id_cliente,
-      nombre: cliente.nombre,
-      telefono: cliente.telefono,
-      deuda_total: 0,
-      pedidos_morosos: [],
-    }
-
-    existing.deuda_total += pendiente
-    existing.pedidos_morosos.push({
-      id_pedido: pedido.id_pedido,
-      total: Number(pedido.total ?? 0),
-      abonado,
-      pendiente,
-      fecha: pedido.fecha ?? null,
-      notas: pedido.notas ?? null,
-    })
-
-    clienteMap.set(cliente.id_cliente, existing)
-  }
-
-  return Array.from(clienteMap.values()).sort((a, b) => b.deuda_total - a.deuda_total)
+  return (balances ?? []).map(b => ({
+    id_cliente: b.id_cliente,
+    nombre: b.nombre,
+    telefono: null as string | null,
+    deuda_total: Number(b.balance),
+    pedidos_morosos: [] as { id_pedido: string; total: number; abonado: number; pendiente: number; fecha: string | null; notas: string | null }[],
+  }))
 }
 
 // Registra un abono parcial a un pedido específico
@@ -168,44 +106,24 @@ export async function getAbonosPorPedido(idPedido: string) {
   return data ?? []
 }
 
-// Obtiene los pedidos morosos de un cliente con sus abonos ya descontados
+// Obtiene los pedidos morosos de un cliente usando la vista optimizada
 export async function getPedidosMorososCliente(idCliente: string) {
   const supabase = await createClient()
 
-  const [{ data: pedidosMorosos }, { data: abonos }] = await Promise.all([
-    supabase
-      .from('pedido')
-      .select('id_pedido, total, fecha, notas')
-      .eq('id_cliente', idCliente)
-      .eq('entregado', true)
-      .eq('pagado', false)
-      .order('fecha', { ascending: true }),
-    supabase
-      .from('pago')
-      .select('id_pedido, monto')
-      .eq('id_cliente', idCliente),
-  ])
+  const { data } = await supabase
+    .from('vista_morosos')
+    .select('*')
+    .eq('id_cliente', idCliente)
+    .order('dias_atraso', { ascending: false })
 
-  const abonosPorPedido = new Map<string, number>()
-  for (const abono of abonos ?? []) {
-    if (!abono.id_pedido) continue
-    const current = abonosPorPedido.get(abono.id_pedido) ?? 0
-    abonosPorPedido.set(abono.id_pedido, current + Number(abono.monto))
-  }
-
-  return (pedidosMorosos ?? [])
-    .map((p) => {
-      const abonado = abonosPorPedido.get(p.id_pedido) ?? 0
-      return {
-        id_pedido: p.id_pedido,
-        total: Number(p.total ?? 0),
-        abonado,
-        pendiente: Number(p.total ?? 0) - abonado,
-        fecha: p.fecha,
-        notas: p.notas,
-      }
-    })
-    .filter((p) => p.pendiente > 0)
+  return (data ?? []).map((m) => ({
+    id_pedido: m.id_pedido,
+    total: Number(m.total),
+    abonado: Number(m.total_abonado),
+    pendiente: Number(m.deuda_restante),
+    fecha: m.fecha,
+    notas: null as string | null,
+  }))
 }
 
 // Obtiene el historial de abonos de un cliente

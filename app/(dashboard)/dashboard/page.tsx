@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
 import { RecentRoutes } from '@/components/dashboard/RecentRoutes'
 import { SalesChart } from '@/components/dashboard/SalesChart'
+import { MorososAlert } from '@/components/dashboard/MorososAlert'
 
 export const metadata = { title: 'Dashboard — Canele' }
 
@@ -83,6 +84,7 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
+      <MorososAlert morososCount={data.totalMorosos} />
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">

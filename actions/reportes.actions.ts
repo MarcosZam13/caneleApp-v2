@@ -3,21 +3,24 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-// Reporte de morosos: clientes con deuda agrupados por antigüedad
+// Reporte de morosos: usa la vista_morosos optimizada
 export async function getReporteMorosos() {
   const supabase = await createClient()
 
   const { data } = await supabase
-    .from('pedido')
-    .select(`
-      id_pedido, total, fecha, notas,
-      cliente:id_cliente (id_cliente, nombre, telefono)
-    `)
-    .eq('entregado', true)
-    .eq('pagado', false)
-    .order('fecha', { ascending: true })
+    .from('vista_morosos')
+    .select('*')
+    .order('dias_atraso', { ascending: false })
 
-  return data ?? []
+  return (data ?? []).map(m => ({
+    id_pedido: m.id_pedido,
+    total: m.total,
+    fecha: m.fecha,
+    notas: null,
+    cliente: { id_cliente: m.id_cliente, nombre: m.cliente_nombre, telefono: null },
+    dias_atraso: m.dias_atraso,
+    deuda_restante: m.deuda_restante,
+  }))
 }
 
 // Reporte de ventas por ruta (últimas N rutas completadas)
