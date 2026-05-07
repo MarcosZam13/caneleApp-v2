@@ -42,29 +42,32 @@ export async function getClientesPaginados(page = 1, pageSize = 30, search = '',
       .eq('pagado', false)
       .not('id_cliente', 'is', null)
 
-    const morososIds = [...new Set((pedidosMorosos ?? []).map((p) => p.id_cliente!))]
+    const pedidosArray: { id_cliente: string | null }[] = pedidosMorosos ?? []
+    const morososIds = [...new Set(pedidosArray.map((p) => p.id_cliente).filter(Boolean))] as string[]
     if (morososIds.length === 0) return { clientes: [] as ClienteConBalance[], total: 0 }
 
     query = query.in('id_cliente', morososIds)
   }
 
-  const { data: clientes, count } = await query.range(from, to)
+  const { data: raw, count } = await query.range(from, to)
+  const clientes: Cliente[] = (raw ?? []) as Cliente[]
 
-  if (!clientes || clientes.length === 0) {
+  if (!raw || raw.length === 0) {
     return { clientes: [] as ClienteConBalance[], total: count ?? 0 }
   }
 
   // Calcula deuda solo para los clientes de esta página
   const clienteIds = clientes.map(c => c.id_cliente)
-  const { data: pedidosSinPagar } = await supabase
+  const { data: rawPedidos } = await supabase
     .from('pedido')
     .select('id_cliente, total')
     .eq('entregado', true)
     .eq('pagado', false)
     .in('id_cliente', clienteIds)
+  const pedidosSinPagar = (rawPedidos ?? []) as { id_cliente: string | null; total: number | null }[]
 
   const deudaMap = new Map<string, { total: number; count: number }>()
-  for (const p of pedidosSinPagar ?? []) {
+  for (const p of pedidosSinPagar) {
     if (!p.id_cliente) continue
     const current = deudaMap.get(p.id_cliente) ?? { total: 0, count: 0 }
     deudaMap.set(p.id_cliente, {
@@ -86,22 +89,24 @@ export async function getClientesPaginados(page = 1, pageSize = 30, search = '',
 export async function getClientes(): Promise<ClienteConBalance[]> {
   const supabase = await createClient()
 
-  const { data: clientes } = await supabase
+  const { data: rawClientes } = await supabase
     .from('cliente')
     .select('id_cliente, nombre, telefono, email, observaciones, created_at')
     .order('nombre', { ascending: true })
+  const clientes = (rawClientes ?? []) as Cliente[]
 
-  if (!clientes) return []
+  if (clientes.length === 0) return []
 
   // Calcula la deuda de cada cliente: pedidos entregados pero no pagados
-  const { data: morosos } = await supabase
+  const { data: rawMorosos } = await supabase
     .from('pedido')
     .select('id_cliente, total')
     .eq('entregado', true)
     .eq('pagado', false)
+  const dataArray = (rawMorosos ?? []) as { id_cliente: string | null; total: number | null }[]
 
   const deudaMap = new Map<string, { total: number; count: number }>()
-  for (const p of morosos ?? []) {
+  for (const p of dataArray) {
     if (!p.id_cliente) continue
     const current = deudaMap.get(p.id_cliente) ?? { total: 0, count: 0 }
     deudaMap.set(p.id_cliente, {
