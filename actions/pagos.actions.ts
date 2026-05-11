@@ -16,21 +16,42 @@ const abonoSchema = z.object({
   metodo: z.enum(['efectivo', 'sinpe', 'transferencia', 'otro']),
 })
 
-// Obtiene todos los clientes con deuda usando la vista de balance
+// Obtiene todos los clientes con deuda usando la vista de balance, incluyendo sus pedidos morosos
 export async function getClientesConDeuda() {
   const supabase = await createClient()
 
-  const { data: balances } = await supabase
-    .from('vista_balance_cliente')
-    .select('*')
-    .order('balance', { ascending: false })
+  const [{ data: balances }, { data: morosos }] = await Promise.all([
+    supabase
+      .from('vista_balance_cliente')
+      .select('id_cliente, nombre, balance')
+      .gt('balance', 0)
+      .order('balance', { ascending: false }),
+    supabase
+      .from('vista_morosos')
+      .select('id_pedido, id_cliente, total, total_abonado, deuda_restante, fecha')
+      .order('dias_atraso', { ascending: false }),
+  ])
+
+  const morososPorCliente = new Map<string, NonNullable<typeof morosos>>()
+  for (const m of morosos ?? []) {
+    if (!m.id_cliente) continue
+    if (!morososPorCliente.has(m.id_cliente)) morososPorCliente.set(m.id_cliente, [])
+    morososPorCliente.get(m.id_cliente)!.push(m)
+  }
 
   return (balances ?? []).map(b => ({
     id_cliente: b.id_cliente,
     nombre: b.nombre,
     telefono: null as string | null,
     deuda_total: Number(b.balance),
-    pedidos_morosos: [] as { id_pedido: string; total: number; abonado: number; pendiente: number; fecha: string | null; notas: string | null }[],
+    pedidos_morosos: (morososPorCliente.get(b.id_cliente) ?? []).map(m => ({
+      id_pedido: m.id_pedido,
+      total: Number(m.total),
+      abonado: Number(m.total_abonado),
+      pendiente: Number(m.deuda_restante),
+      fecha: m.fecha,
+      notas: null as string | null,
+    })),
   }))
 }
 

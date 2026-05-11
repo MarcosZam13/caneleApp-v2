@@ -266,6 +266,31 @@ export async function marcarPedidoEntregado(idPedido: string, idRuta: string): P
 export async function marcarPedidoPagado(idPedido: string, idRuta: string): Promise<ActionResult> {
   const supabase = await createClient()
 
+  const { data: pedido } = await supabase
+    .from('pedido')
+    .select('total, id_cliente')
+    .eq('id_pedido', idPedido)
+    .single()
+
+  if (!pedido) return { success: false, error: 'Pedido no encontrado' }
+
+  const { data: abonos } = await supabase
+    .from('pago')
+    .select('monto')
+    .eq('id_pedido', idPedido)
+
+  const totalAbonado = (abonos ?? []).reduce((acc, a) => acc + Number(a.monto), 0)
+  const pendiente = Number(pedido.total ?? 0) - totalAbonado
+
+  if (pendiente > 0) {
+    await supabase.from('pago').insert({
+      id_pedido: idPedido,
+      id_cliente: pedido.id_cliente,
+      monto: pendiente,
+      metodo: 'efectivo',
+    })
+  }
+
   const { error } = await supabase
     .from('pedido')
     .update({ pagado: true })
@@ -277,6 +302,7 @@ export async function marcarPedidoPagado(idPedido: string, idRuta: string): Prom
   }
 
   revalidatePath(`/rutas/${idRuta}`)
+  revalidatePath('/pagos')
   revalidatePath('/clientes')
   return { success: true }
 }

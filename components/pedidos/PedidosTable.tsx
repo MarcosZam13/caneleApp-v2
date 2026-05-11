@@ -217,9 +217,9 @@ export function PedidosTable({
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Cliente</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Ruta</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                <TableHead className="hidden sm:table-cell">Ruta</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Total</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-28" />
               </TableRow>
@@ -229,26 +229,29 @@ export function PedidosTable({
                 <TableRow key={pedido.id_pedido} className="hover:bg-muted/30 group">
                   <TableCell>
                     <p className="font-medium">{pedido.cliente?.nombre ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground sm:hidden font-medium">
+                      ₡{Number(pedido.total ?? 0).toLocaleString('es-CR')}
+                    </p>
                     {pedido.notas && (
                       <p className="text-xs text-muted-foreground truncate max-w-48">{pedido.notas}</p>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap hidden sm:table-cell">
                     {pedido.fecha
                       ? format(parseISO(pedido.fecha + 'T12:00:00'), 'dd MMM yyyy', { locale: es })
                       : '—'}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                     {pedido.ruta?.nombre ?? <span className="italic">Sin ruta</span>}
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right font-medium hidden sm:table-cell">
                     ₡{Number(pedido.total ?? 0).toLocaleString('es-CR')}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={getStatus(pedido)} />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       {!pedido.entregado && (
                         <Button
                           size="sm" variant="outline" className="h-7 text-xs gap-1"

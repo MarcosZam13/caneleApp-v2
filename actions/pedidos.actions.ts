@@ -193,9 +193,37 @@ export async function crearPedido(formData: unknown): Promise<ActionResult<Pedid
 
 export async function marcarPagado(id: string): Promise<ActionResult> {
   const supabase = await createClient()
+
+  const { data: pedido } = await supabase
+    .from('pedido')
+    .select('total, id_cliente')
+    .eq('id_pedido', id)
+    .single()
+
+  if (!pedido) return { success: false, error: 'Pedido no encontrado' }
+
+  const { data: abonos } = await supabase
+    .from('pago')
+    .select('monto')
+    .eq('id_pedido', id)
+
+  const totalAbonado = (abonos ?? []).reduce((acc, a) => acc + Number(a.monto), 0)
+  const pendiente = Number(pedido.total ?? 0) - totalAbonado
+
+  if (pendiente > 0) {
+    await supabase.from('pago').insert({
+      id_pedido: id,
+      id_cliente: pedido.id_cliente,
+      monto: pendiente,
+      metodo: 'efectivo',
+    })
+  }
+
   const { error } = await supabase.from('pedido').update({ pagado: true }).eq('id_pedido', id)
   if (error) return { success: false, error: 'Error al marcar como pagado' }
+
   revalidatePath('/pedidos')
+  revalidatePath('/pagos')
   revalidatePath('/clientes')
   return { success: true }
 }
