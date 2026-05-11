@@ -129,9 +129,9 @@ export function ClientesTable({ clientes, page, pageSize, total, search, morosos
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Nombre</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="text-right">Deuda pendiente</TableHead>
+                <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Deuda pendiente</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
@@ -147,14 +147,19 @@ export function ClientesTable({ clientes, page, pageSize, total, search, morosos
                         </Badge>
                       )}
                     </div>
+                    {cliente.total_deuda > 0 && (
+                      <p className="text-xs font-medium text-destructive sm:hidden">
+                        ₡{Number(cliente.total_deuda).toLocaleString('es-CR')}
+                      </p>
+                    )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
                     {cliente.telefono ?? '—'}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                     {cliente.email ?? '—'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right hidden sm:table-cell">
                     {cliente.total_deuda > 0 ? (
                       <span className="font-medium text-destructive">
                         ₡{Number(cliente.total_deuda).toLocaleString('es-CR')}
@@ -164,7 +169,7 @@ export function ClientesTable({ clientes, page, pageSize, total, search, morosos
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
                         size="icon"
