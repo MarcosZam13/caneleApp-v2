@@ -8,6 +8,7 @@ import { getRutaCompleta } from '@/actions/rutas.actions'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { RutaDetalle } from '@/components/rutas/RutaDetalle'
+import { RutaAcciones } from '@/components/rutas/RutaAcciones'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -36,7 +37,7 @@ export default async function RutaDetailPage({ params }: { params: Promise<{ id:
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{ruta.nombre ?? 'Ruta sin nombre'}</h1>
           {fechaFormateada && (
@@ -45,8 +46,15 @@ export default async function RutaDetailPage({ params }: { params: Promise<{ id:
               {fechaFormateada}
             </p>
           )}
+          <div className="mt-2">
+            <StatusBadge status={ruta.estado ?? 'pendiente'} className="text-sm px-3 py-1" />
+          </div>
         </div>
-        <StatusBadge status={ruta.estado ?? 'pendiente'} className="text-sm px-3 py-1" />
+        <RutaAcciones
+          rutaId={ruta.id_ruta}
+          rutaNombre={ruta.nombre ?? null}
+          rutaFecha={ruta.fecha ?? null}
+        />
       </div>
 
       <RutaDetalle
