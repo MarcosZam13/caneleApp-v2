@@ -66,6 +66,7 @@ export default async function PedidosPage({
         fechaDesde={fechaDesde}
         fechaHasta={fechaHasta}
         rutas={rutas.map(r => ({ id_ruta: r.id_ruta, nombre: r.nombre }))}
+        clientes={clientesOpt}
       />
     </div>
   )

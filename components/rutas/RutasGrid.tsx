@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { MapPin, Plus, ChevronRight, TrendingUp, ShoppingBag, Trash2 } from 'lucide-react'
+import { MapPin, Plus, ChevronRight, TrendingUp, ShoppingBag, Trash2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -30,6 +30,7 @@ interface RutasGridProps {
 export function RutasGrid({ rutas, page, pageSize, total, estadoActivo }: RutasGridProps) {
   const router = useRouter()
   const [showCreate, setShowCreate] = useState(false)
+  const [editRuta, setEditRuta] = useState<Ruta | null>(null)
   const [deleteRutaId, setDeleteRutaId] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -87,7 +88,7 @@ export function RutasGrid({ rutas, page, pageSize, total, estadoActivo }: RutasG
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rutas.map((ruta) => (
-            <RutaCard key={ruta.id_ruta} ruta={ruta} onDelete={(id) => setDeleteRutaId(id)} />
+            <RutaCard key={ruta.id_ruta} ruta={ruta} onDelete={(id) => setDeleteRutaId(id)} onEdit={(r) => setEditRuta(r)} />
           ))}
         </div>
       )}
@@ -101,6 +102,11 @@ export function RutasGrid({ rutas, page, pageSize, total, estadoActivo }: RutasG
       />
 
       <RutaFormDialog open={showCreate} onOpenChange={setShowCreate} />
+      <RutaFormDialog
+        open={!!editRuta}
+        onOpenChange={(open) => { if (!open) setEditRuta(null) }}
+        ruta={editRuta ?? undefined}
+      />
 
       <ConfirmDialog
         open={deleteRutaId !== null}
@@ -116,7 +122,7 @@ export function RutasGrid({ rutas, page, pageSize, total, estadoActivo }: RutasG
   )
 }
 
-function RutaCard({ ruta, onDelete }: { ruta: Ruta; onDelete: (id: string) => void }) {
+function RutaCard({ ruta, onDelete, onEdit }: { ruta: Ruta; onDelete: (id: string) => void; onEdit: (ruta: Ruta) => void }) {
   const fecha = ruta.fecha
     ? format(parseISO(ruta.fecha + 'T12:00:00'), "EEEE dd 'de' MMMM", { locale: es })
     : '—'
@@ -153,14 +159,24 @@ function RutaCard({ ruta, onDelete }: { ruta: Ruta; onDelete: (id: string) => vo
           </CardContent>
         </Card>
       </Link>
-      <button
-        type="button"
-        className="absolute top-3 right-3 p-1.5 rounded-md bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-0 group-hover/card:opacity-100 transition-all z-10"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(ruta.id_ruta) }}
-        title="Eliminar ruta"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-all z-10">
+        <button
+          type="button"
+          className="p-1.5 rounded-md bg-background/80 hover:bg-accent text-muted-foreground hover:text-foreground"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(ruta) }}
+          title="Editar ruta"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          className="p-1.5 rounded-md bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(ruta.id_ruta) }}
+          title="Eliminar ruta"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   )
 }

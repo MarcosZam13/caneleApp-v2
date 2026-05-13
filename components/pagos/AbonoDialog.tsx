@@ -46,9 +46,12 @@ export function AbonoDialog({ open, onOpenChange, idCliente, nombreCliente, pedi
   }, [open])
 
   const pedidoSeleccionado = pedidos.find(p => p.id_pedido === idPedido)
-  const montoNum = Number(monto)
-  const excedePendiente = pedidoSeleccionado && montoNum > pedidoSeleccionado.pendiente
-  const cubriTotal = pedidoSeleccionado && montoNum > 0 && montoNum >= pedidoSeleccionado.pendiente
+  const montoNum = monto === '' ? 0 : Number(monto)
+  // Redondea a 2 decimales para evitar falsos positivos por floating-point
+  const pendienteRedondeado = pedidoSeleccionado ? Math.round(pedidoSeleccionado.pendiente * 100) / 100 : 0
+  const montoRedondeado = Math.round(montoNum * 100) / 100
+  const excedePendiente = pedidoSeleccionado && montoNum > 0 && montoRedondeado > pendienteRedondeado
+  const cubriTotal = pedidoSeleccionado && montoNum > 0 && montoRedondeado >= pendienteRedondeado
 
   function handlePagarTotal() {
     if (pedidoSeleccionado) setMonto(String(pedidoSeleccionado.pendiente))
@@ -66,12 +69,23 @@ export function AbonoDialog({ open, onOpenChange, idCliente, nombreCliente, pedi
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!monto || montoNum <= 0) {
+    if (!idPedido) {
+      toast.error('Selecciona un pedido')
+      return
+    }
+
+    // Campo vacío = pagar el total pendiente automáticamente
+    const montoFinal = (!monto || montoNum <= 0)
+      ? pendienteRedondeado
+      : montoRedondeado
+
+    if (montoFinal <= 0) {
       toast.error('El monto debe ser mayor a 0')
       return
     }
-    if (!idPedido) {
-      toast.error('Selecciona un pedido')
+
+    if (pedidoSeleccionado && montoFinal > pendienteRedondeado) {
+      toast.error(`El monto no puede superar el pendiente de ₡${pendienteRedondeado.toLocaleString('es-CR')}`)
       return
     }
 
@@ -79,15 +93,16 @@ export function AbonoDialog({ open, onOpenChange, idCliente, nombreCliente, pedi
     const result = await registrarAbono({
       id_cliente: idCliente,
       id_pedido: idPedido,
-      monto: montoNum,
+      monto: montoFinal,
       metodo,
     })
     setLoading(false)
 
     if (result.success) {
-      const msg = cubriTotal
+      const esPagoCompleto = !monto || montoFinal >= pendienteRedondeado
+      const msg = esPagoCompleto
         ? 'Pago completo registrado — pedido marcado como pagado'
-        : `Abono de ₡${montoNum.toLocaleString('es-CR')} registrado correctamente`
+        : `Abono de ₡${montoFinal.toLocaleString('es-CR')} registrado correctamente`
       toast.success(msg)
       onOpenChange(false)
     } else {
@@ -179,22 +194,30 @@ export function AbonoDialog({ open, onOpenChange, idCliente, nombreCliente, pedi
             <Input
               id="monto"
               type="number"
-              min="1"
+              min="0"
               step="100"
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
-              placeholder={pedidoSeleccionado ? pedidoSeleccionado.pendiente.toLocaleString('es-CR') : '0'}
-              required
-              className={excedePendiente ? 'border-amber-400' : ''}
+              placeholder={
+                pedidoSeleccionado
+                  ? `Dejar vacío para pagar todo (₡${pendienteRedondeado.toLocaleString('es-CR')})`
+                  : '0'
+              }
+              className={excedePendiente ? 'border-destructive' : ''}
             />
+            {!monto && pedidoSeleccionado && (
+              <p className="text-xs text-muted-foreground">
+                Vacío = se pagará el total pendiente de ₡{pendienteRedondeado.toLocaleString('es-CR')}.
+              </p>
+            )}
             {cubriTotal && !excedePendiente && (
               <p className="text-xs text-green-600 font-medium">
                 ✓ Cubre la deuda completa — el pedido quedará como pagado.
               </p>
             )}
             {excedePendiente && (
-              <p className="text-xs text-amber-600 font-medium">
-                ⚠ El monto supera la deuda pendiente de ₡{pedidoSeleccionado!.pendiente.toLocaleString('es-CR')}.
+              <p className="text-xs text-destructive font-medium">
+                El monto supera la deuda pendiente de ₡{pendienteRedondeado.toLocaleString('es-CR')}.
               </p>
             )}
           </div>
@@ -219,8 +242,8 @@ export function AbonoDialog({ open, onOpenChange, idCliente, nombreCliente, pedi
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !monto || montoNum <= 0}>
-              {loading ? 'Registrando...' : cubriTotal ? 'Registrar pago total' : 'Registrar abono'}
+            <Button type="submit" disabled={loading || excedePendiente || !pedidoSeleccionado}>
+              {loading ? 'Registrando...' : (cubriTotal || !monto) ? 'Registrar pago total' : 'Registrar abono'}
             </Button>
           </SheetFooter>
         </form>

@@ -6,12 +6,15 @@ import { es } from 'date-fns/locale'
 import { ArrowLeft, User, Phone, Mail, MapPin, Route, FileText, CreditCard } from 'lucide-react'
 import { getPedidoById } from '@/actions/pedidos.actions'
 import { getAbonosPorPedido } from '@/actions/pagos.actions'
+import { getClientes } from '@/actions/clientes.actions'
+import { getRutasParaProduccion } from '@/actions/produccion.actions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { PedidoAcciones } from '@/components/pedidos/PedidoAcciones'
+import { EditarPedidoSheet } from '@/components/pedidos/EditarPedidoSheet'
 
 // Determina el estado del pedido para el badge
 function getEstado(entregado: boolean | null, pagado: boolean | null): string {
@@ -47,9 +50,11 @@ const METODO_LABEL: Record<string, string> = {
 export default async function PedidoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const [pedido, abonos] = await Promise.all([
+  const [pedido, abonos, clientes, rutas] = await Promise.all([
     getPedidoById(id),
     getAbonosPorPedido(id),
+    getClientes(),
+    getRutasParaProduccion(),
   ])
 
   if (!pedido) notFound()
@@ -85,11 +90,18 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
             )}
           </div>
         </div>
-        <PedidoAcciones
-          idPedido={pedido.id_pedido}
-          entregado={pedido.entregado ?? false}
-          pagado={pedido.pagado ?? false}
-        />
+        <div className="flex items-center gap-2">
+          <EditarPedidoSheet
+            idPedido={pedido.id_pedido}
+            clientes={clientes.map(c => ({ id_cliente: c.id_cliente, nombre: c.nombre }))}
+            rutas={rutas.map(r => ({ id_ruta: r.id_ruta, nombre: r.nombre, fecha: r.fecha ?? null }))}
+          />
+          <PedidoAcciones
+            idPedido={pedido.id_pedido}
+            entregado={pedido.entregado ?? false}
+            pagado={pedido.pagado ?? false}
+          />
+        </div>
       </div>
 
       {/* Contenido principal */}

@@ -191,6 +191,108 @@ export async function crearPedido(formData: unknown): Promise<ActionResult<Pedid
   return { success: true, data: pedido }
 }
 
+// Actualiza un pedido existente: cabecera + items + contadores de ruta
+export async function updatePedido(id: string, formData: unknown): Promise<ActionResult<Pedido>> {
+  const supabase = await createClient()
+
+  const parsed = crearPedidoSchema.safeParse(formData)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message }
+  }
+
+  const { id_cliente, id_ruta, id_direccion, fecha, notas, prioritaria, items } = parsed.data
+
+  // Obtener datos previos para actualizar contadores de ruta
+  const { data: pedidoAnterior } = await supabase
+    .from('pedido')
+    .select('id_ruta, total')
+    .eq('id_pedido', id)
+    .single()
+
+  if (!pedidoAnterior) return { success: false, error: 'Pedido no encontrado' }
+
+  const nuevoTotal = items.reduce((acc, item) => acc + item.cantidad * item.precio_unitario, 0)
+  const totalAnterior = Number(pedidoAnterior.total ?? 0)
+  const rutaAnterior = pedidoAnterior.id_ruta
+
+  // Actualizar cabecera del pedido
+  const { data: pedido, error: pedidoError } = await supabase
+    .from('pedido')
+    .update({
+      id_cliente,
+      id_ruta: id_ruta ?? null,
+      id_direccion: id_direccion ?? null,
+      fecha,
+      notas: notas ?? null,
+      prioritaria,
+      total: nuevoTotal,
+    })
+    .eq('id_pedido', id)
+    .select()
+    .single()
+
+  if (pedidoError || !pedido) {
+    console.error('[updatePedido] header:', pedidoError)
+    return { success: false, error: 'Error al actualizar el pedido' }
+  }
+
+  // Reemplazar items: eliminar los anteriores e insertar los nuevos
+  await supabase.from('pedido_producto').delete().eq('id_pedido', id)
+
+  const itemsToInsert = items.map((item) => ({
+    id_pedido: id,
+    id_producto: item.id_producto,
+    cantidad: item.cantidad,
+    rebanado: item.rebanado,
+    cuadrado: item.cuadrado,
+    precio_unitario: item.precio_unitario,
+    sub_total: item.cantidad * item.precio_unitario,
+  }))
+
+  const { error: itemsError } = await supabase.from('pedido_producto').insert(itemsToInsert)
+  if (itemsError) {
+    console.error('[updatePedido] items:', itemsError)
+    return { success: false, error: 'Error al actualizar los productos del pedido' }
+  }
+
+  // Actualizar contadores de ruta
+  if (rutaAnterior !== id_ruta) {
+    // Ruta cambió: decrementar la anterior, incrementar la nueva
+    if (rutaAnterior) {
+      const { data: rutaOld } = await supabase.from('ruta').select('total_pedidos, total_venta').eq('id_ruta', rutaAnterior).single()
+      if (rutaOld) {
+        await supabase.from('ruta').update({
+          total_pedidos: Math.max(0, (rutaOld.total_pedidos ?? 1) - 1),
+          total_venta: Math.max(0, Number(rutaOld.total_venta ?? 0) - totalAnterior),
+        }).eq('id_ruta', rutaAnterior)
+      }
+    }
+    if (id_ruta) {
+      const { data: rutaNew } = await supabase.from('ruta').select('total_pedidos, total_venta').eq('id_ruta', id_ruta).single()
+      if (rutaNew) {
+        await supabase.from('ruta').update({
+          total_pedidos: (rutaNew.total_pedidos ?? 0) + 1,
+          total_venta: Number(rutaNew.total_venta ?? 0) + nuevoTotal,
+        }).eq('id_ruta', id_ruta)
+      }
+    }
+  } else if (id_ruta && totalAnterior !== nuevoTotal) {
+    // Misma ruta pero total cambió: solo ajustar total_venta
+    const { data: ruta } = await supabase.from('ruta').select('total_venta').eq('id_ruta', id_ruta).single()
+    if (ruta) {
+      await supabase.from('ruta').update({
+        total_venta: Math.max(0, Number(ruta.total_venta ?? 0) - totalAnterior + nuevoTotal),
+      }).eq('id_ruta', id_ruta)
+    }
+  }
+
+  revalidatePath('/pedidos')
+  revalidatePath(`/pedidos/${id}`)
+  revalidatePath('/rutas')
+  revalidatePath('/dashboard')
+  return { success: true, data: pedido }
+}
+
 export async function marcarPagado(id: string): Promise<ActionResult> {
   const supabase = await createClient()
 

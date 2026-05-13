@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { ShoppingBag, ExternalLink, CheckCircle2, Wallet, X, Trash2 } from 'lucide-react'
+import { ShoppingBag, ExternalLink, CheckCircle2, Wallet, X, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { Pagination } from '@/components/shared/Pagination'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { marcarPagado, marcarEntregado, deletePedido } from '@/actions/pedidos.actions'
+import { EditarPedidoSheet } from './EditarPedidoSheet'
 
 type PedidoRow = {
   id_pedido: string
@@ -42,11 +43,12 @@ interface PedidosTableProps {
   fechaDesde: string
   fechaHasta: string
   rutas: { id_ruta: string; nombre: string | null }[]
+  clientes: { id_cliente: string; nombre: string }[]
 }
 
 export function PedidosTable({
   pedidos, page, pageSize, total, search,
-  estado, idRuta, fechaDesde, fechaHasta, rutas,
+  estado, idRuta, fechaDesde, fechaHasta, rutas, clientes,
 }: PedidosTableProps) {
   const router = useRouter()
   const [localSearch, setLocalSearch] = useState(search)
@@ -277,6 +279,12 @@ export function PedidosTable({
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
+                      <EditarPedidoSheet
+                        idPedido={pedido.id_pedido}
+                        clientes={clientes}
+                        rutas={rutas.map(r => ({ id_ruta: r.id_ruta, nombre: r.nombre, fecha: null }))}
+                        iconOnly
+                      />
                       <Button
                         variant="ghost" size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"

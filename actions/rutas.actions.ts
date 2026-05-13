@@ -135,6 +135,31 @@ export async function getRutaCompleta(id: string) {
   }
 }
 
+export async function updateRuta(id: string, formData: unknown): Promise<ActionResult<Ruta>> {
+  const supabase = await createClient()
+
+  const parsed = rutaSchema.safeParse(formData)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message }
+  }
+
+  const { data, error } = await supabase
+    .from('ruta')
+    .update({ nombre: parsed.data.nombre, fecha: parsed.data.fecha })
+    .eq('id_ruta', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[updateRuta]', error)
+    return { success: false, error: 'Error al actualizar la ruta' }
+  }
+
+  revalidatePath('/rutas')
+  revalidatePath(`/rutas/${id}`)
+  return { success: true, data }
+}
+
 export async function createRuta(formData: unknown): Promise<ActionResult<Ruta>> {
   const supabase = await createClient()
 
