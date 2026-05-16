@@ -1,6 +1,7 @@
 // faltantes/page.tsx — Módulo de faltantes de entrega: pendientes, retrasados e historial
 import { Suspense } from 'react'
 import { getFaltantes, type FiltroFaltantes } from '@/actions/faltantes.actions'
+import { getRutasParaProduccion } from '@/actions/produccion.actions'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { FaltantesTable } from '@/components/faltantes/FaltantesTable'
 import { TableSkeleton } from '@/components/shared/TableSkeleton'
@@ -28,7 +29,10 @@ export default async function FaltantesPage({
   const filtro = parseFiltro(filtroRaw)
   const page = Math.max(1, parseInt(pageParam ?? '1') || 1)
 
-  const result = await getFaltantes(filtro, idRuta || undefined, page, PAGE_SIZE)
+  const [result, rutas] = await Promise.all([
+    getFaltantes(filtro, idRuta || undefined, page, PAGE_SIZE),
+    getRutasParaProduccion(),
+  ])
 
   if (!result.success) {
     return (
@@ -69,6 +73,7 @@ export default async function FaltantesPage({
           pageSize={PAGE_SIZE}
           currentFiltro={filtro}
           idRuta={idRuta}
+          rutas={rutas.map(r => ({ id_ruta: r.id_ruta, nombre: r.nombre }))}
         />
       </Suspense>
     </div>

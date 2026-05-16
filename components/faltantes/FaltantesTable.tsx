@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Package, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -39,6 +40,7 @@ interface FaltantesTableProps {
   pageSize: number
   currentFiltro: FiltroFaltantes
   idRuta: string
+  rutas: { id_ruta: string; nombre: string | null }[]
 }
 
 const filtroLabels: Record<FiltroFaltantes, string> = {
@@ -54,6 +56,7 @@ export function FaltantesTable({
   pageSize,
   currentFiltro,
   idRuta,
+  rutas,
 }: FaltantesTableProps) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -117,18 +120,41 @@ export function FaltantesTable({
   return (
     <div className="space-y-4">
       {/* Tabs de filtro — cada uno navega server-side */}
-      <Tabs
-        value={currentFiltro}
-        onValueChange={(v) => router.push(buildUrl({ filtro: v, page: '1' }))}
-      >
-        <TabsList>
-          {(['pendientes', 'retrasados', 'historial'] as FiltroFaltantes[]).map((f) => (
-            <TabsTrigger key={f} value={f}>
-              {filtroLabels[f]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <Tabs
+          value={currentFiltro}
+          onValueChange={(v) => router.push(buildUrl({ filtro: v, idRuta: v === 'pendientes' ? idRuta : '', page: '1' }))}
+        >
+          <TabsList>
+            {(['pendientes', 'retrasados', 'historial'] as FiltroFaltantes[]).map((f) => (
+              <TabsTrigger key={f} value={f}>
+                {filtroLabels[f]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        {currentFiltro === 'pendientes' && (
+          <div className="flex items-center gap-2">
+            <Select
+              value={idRuta || 'todas'}
+              onValueChange={(v) => router.push(buildUrl({ idRuta: v === 'todas' ? '' : v, page: '1' }))}
+            >
+              <SelectTrigger className="w-full sm:w-52">
+                <SelectValue placeholder="Todas las rutas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las rutas</SelectItem>
+                {rutas.map((r) => (
+                  <SelectItem key={r.id_ruta} value={r.id_ruta}>
+                    {r.nombre ?? r.id_ruta}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
       {/* Texto descriptivo del filtro activo */}
       <p className="text-sm text-muted-foreground">
