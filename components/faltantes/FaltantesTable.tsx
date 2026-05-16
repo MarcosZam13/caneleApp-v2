@@ -141,7 +141,11 @@ export function FaltantesTable({
               onValueChange={(v) => router.push(buildUrl({ idRuta: v === 'todas' ? '' : v, page: '1' }))}
             >
               <SelectTrigger className="w-full sm:w-52">
-                <SelectValue placeholder="Todas las rutas" />
+                <SelectValue placeholder="Todas las rutas">
+                  {idRuta
+                    ? (rutas.find(r => r.id_ruta === idRuta)?.nombre ?? idRuta)
+                    : 'Todas las rutas'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas las rutas</SelectItem>
