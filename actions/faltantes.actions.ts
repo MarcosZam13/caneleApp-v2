@@ -8,7 +8,7 @@ type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string }
 
-export type FiltroFaltantes = 'pendientes' | 'retrasados' | 'historial'
+export type FiltroFaltantes = 'pendientes' | 'historial'
 
 type FaltantesResult = {
   pedidos: PedidoConCliente[]
@@ -59,17 +59,9 @@ export async function getFaltantes(
 
   // Filtro de estado de entrega y ordenamiento según tipo
   if (filtro === 'pendientes') {
-    // Pendientes de entregar: no entregados, los más próximos primero, prioritarios al frente
+    // Todos los no entregados, los más próximos primero, prioritarios al frente
     query = query
       .eq('entregado', false)
-      .order('fecha', { ascending: true })
-      .order('prioritaria', { ascending: false })
-  } else if (filtro === 'retrasados') {
-    // Retrasados: no entregados con fecha anterior a hoy
-    const hoy = new Date().toISOString().split('T')[0] // YYYY-MM-DD en UTC
-    query = query
-      .eq('entregado', false)
-      .lt('fecha', hoy)
       .order('fecha', { ascending: true })
       .order('prioritaria', { ascending: false })
   } else if (filtro === 'historial') {

@@ -12,7 +12,7 @@ const PAGE_SIZE = 25
 
 // Valida que el filtro sea uno de los valores permitidos
 function parseFiltro(raw: string | undefined): FiltroFaltantes {
-  const validos: FiltroFaltantes[] = ['pendientes', 'retrasados', 'historial']
+  const validos: FiltroFaltantes[] = ['pendientes', 'historial']
   return validos.includes(raw as FiltroFaltantes) ? (raw as FiltroFaltantes) : 'pendientes'
 }
 
@@ -51,8 +51,6 @@ export default async function FaltantesPage({
     switch (filtro) {
       case 'pendientes':
         return `${base} · Pendientes de entrega`
-      case 'retrasados':
-        return `${base} · Con fecha de entrega vencida`
       case 'historial':
         return `${base} · Últimas entregas realizadas`
     }

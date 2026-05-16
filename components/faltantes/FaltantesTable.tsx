@@ -45,7 +45,6 @@ interface FaltantesTableProps {
 
 const filtroLabels: Record<FiltroFaltantes, string> = {
   pendientes: 'Pendientes',
-  retrasados: 'Retrasados',
   historial: 'Historial',
 }
 
@@ -92,30 +91,26 @@ export function FaltantesTable({
       toast.error(result.error)
     } else {
       toast.success('Pedido marcado como entregado')
-      router.refresh() // Revalida la página porque marcarEntregado no incluye /faltantes
+      router.refresh()
     }
   }
 
-  // Determina si un pedido está retrasado (fecha anterior a hoy)
+  // Determina si un pedido pendiente tiene fecha de entrega vencida
   function isRetrasado(fecha: string | null): boolean {
     if (!fecha) return false
     try {
-      const fechaDate = startOfDay(parseISO(fecha + 'T12:00:00'))
-      const hoy = startOfDay(new Date())
-      return isBefore(fechaDate, hoy)
+      return isBefore(startOfDay(parseISO(fecha + 'T12:00:00')), startOfDay(new Date()))
     } catch {
       return false
     }
   }
 
-  // Texto descriptivo según el filtro activo
   const filtroDescription: Record<FiltroFaltantes, string> = {
-    pendientes: 'Pedidos sin entregar, ordenados por fecha más próxima',
-    retrasados: 'Pedidos con fecha de entrega vencida',
+    pendientes: 'Todos los pedidos sin entregar, ordenados por fecha',
     historial: 'Últimos 50 pedidos entregados',
   }
 
-  const pedidosRetrasadosCount = pedidos.filter(p => isRetrasado(p.fecha)).length
+  const retrasadosCount = pedidos.filter(p => isRetrasado(p.fecha)).length
 
   return (
     <div className="space-y-4">
@@ -126,7 +121,7 @@ export function FaltantesTable({
           onValueChange={(v) => router.push(buildUrl({ filtro: v, idRuta: v === 'pendientes' ? idRuta : '', page: '1' }))}
         >
           <TabsList>
-            {(['pendientes', 'retrasados', 'historial'] as FiltroFaltantes[]).map((f) => (
+            {(['pendientes', 'historial'] as FiltroFaltantes[]).map((f) => (
               <TabsTrigger key={f} value={f}>
                 {filtroLabels[f]}
               </TabsTrigger>
@@ -135,37 +130,35 @@ export function FaltantesTable({
         </Tabs>
 
         {currentFiltro === 'pendientes' && (
-          <div className="flex items-center gap-2">
-            <Select
-              value={idRuta || 'todas'}
-              onValueChange={(v) => router.push(buildUrl({ idRuta: v === 'todas' ? '' : v, page: '1' }))}
-            >
-              <SelectTrigger className="w-full sm:w-52">
-                <SelectValue placeholder="Todas las rutas">
-                  {idRuta
-                    ? (rutas.find(r => r.id_ruta === idRuta)?.nombre ?? idRuta)
-                    : 'Todas las rutas'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas las rutas</SelectItem>
-                {rutas.map((r) => (
-                  <SelectItem key={r.id_ruta} value={r.id_ruta}>
-                    {r.nombre ?? r.id_ruta}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={idRuta || 'todas'}
+            onValueChange={(v) => router.push(buildUrl({ idRuta: v === 'todas' ? '' : v, page: '1' }))}
+          >
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder="Todas las rutas">
+                {idRuta
+                  ? (rutas.find(r => r.id_ruta === idRuta)?.nombre ?? idRuta)
+                  : 'Todas las rutas'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas las rutas</SelectItem>
+              {rutas.map((r) => (
+                <SelectItem key={r.id_ruta} value={r.id_ruta}>
+                  {r.nombre ?? r.id_ruta}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
 
       {/* Texto descriptivo del filtro activo */}
       <p className="text-sm text-muted-foreground">
         {filtroDescription[currentFiltro]}
-        {currentFiltro === 'pendientes' && pedidosRetrasadosCount > 0 && (
+        {currentFiltro === 'pendientes' && retrasadosCount > 0 && (
           <span className="text-amber-600 font-medium">
-            {' · '}{pedidosRetrasadosCount} con fecha vencida
+            {' · '}{retrasadosCount} con fecha vencida
           </span>
         )}
       </p>
@@ -173,13 +166,11 @@ export function FaltantesTable({
       {pedidos.length === 0 ? (
         <EmptyState
           icon={Package}
-          title={`No hay pedidos ${filtroLabels[currentFiltro].toLowerCase()}`}
+          title={currentFiltro === 'pendientes' ? 'No hay pedidos pendientes' : 'No hay pedidos en el historial'}
           description={
             currentFiltro === 'pendientes'
               ? 'Todos los pedidos han sido entregados'
-              : currentFiltro === 'retrasados'
-                ? 'No hay pedidos con fecha de entrega vencida'
-                : 'No hay pedidos en el historial de entregas'
+              : 'No hay pedidos entregados registrados'
           }
         />
       ) : (
@@ -192,71 +183,81 @@ export function FaltantesTable({
                 <TableHead>Fecha</TableHead>
                 <TableHead>Ruta</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead>Prioridad</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pedidos.map((pedido) => (
-                <TableRow key={pedido.id_pedido} className="hover:bg-muted/30 group">
-                  <TableCell>
-                    <p className="font-medium">{pedido.cliente?.nombre ?? '—'}</p>
-                    {pedido.notas && (
-                      <p className="text-xs text-muted-foreground truncate max-w-48">{pedido.notas}</p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-48 truncate">
-                    {pedido.direccion?.direccion_texto ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                    {pedido.fecha
-                      ? format(parseISO(pedido.fecha + 'T12:00:00'), 'dd MMM yyyy', { locale: es })
-                      : '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {pedido.ruta?.nombre ?? <span className="italic">Sin ruta</span>}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    ₡{Number(pedido.total ?? 0).toLocaleString('es-CR')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {pedido.prioritaria && (
-                        <Badge className="bg-red-100 text-red-800 border-red-200 text-xs font-medium">
-                          Urgente
-                        </Badge>
+              {pedidos.map((pedido) => {
+                const retrasado = !pedido.entregado && isRetrasado(pedido.fecha)
+                return (
+                  <TableRow key={pedido.id_pedido} className="hover:bg-muted/30 group">
+                    <TableCell>
+                      <p className="font-medium">{pedido.cliente?.nombre ?? '—'}</p>
+                      {pedido.notas && (
+                        <p className="text-xs text-muted-foreground truncate max-w-48">{pedido.notas}</p>
                       )}
-                      {isRetrasado(pedido.fecha) && (
-                        <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs font-medium">
-                          Retrasado
-                        </Badge>
-                      )}
-                      {!pedido.prioritaria && !isRetrasado(pedido.fecha) && (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => setConfirmEntregarId(pedido.id_pedido)}
-                        disabled={loadingId === pedido.id_pedido}
-                      >
-                        {loadingId === pedido.id_pedido ? (
-                          <>Procesando...</>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-3 w-3" /> Entregar
-                          </>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-48 truncate">
+                      {pedido.direccion?.direccion_texto ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {pedido.fecha
+                        ? format(parseISO(pedido.fecha + 'T12:00:00'), 'dd MMM yyyy', { locale: es })
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {pedido.ruta?.nombre ?? <span className="italic">Sin ruta</span>}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ₡{Number(pedido.total ?? 0).toLocaleString('es-CR')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {pedido.prioritaria && !pedido.entregado && (
+                          <Badge className="bg-red-100 text-red-800 border-red-200 text-xs font-medium">
+                            Urgente
+                          </Badge>
                         )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {retrasado && (
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs font-medium">
+                            Retrasado
+                          </Badge>
+                        )}
+                        {pedido.entregado && (
+                          <Badge className="bg-green-100 text-green-800 border-green-200 text-xs font-medium">
+                            Entregado
+                          </Badge>
+                        )}
+                        {!pedido.entregado && !pedido.prioritaria && !retrasado && (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {!pedido.entregado && (
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => setConfirmEntregarId(pedido.id_pedido)}
+                            disabled={loadingId === pedido.id_pedido}
+                          >
+                            {loadingId === pedido.id_pedido ? (
+                              <>Procesando...</>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-3 w-3" /> Entregar
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
