@@ -2,11 +2,12 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format, parseISO, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { Package, CheckCircle2 } from 'lucide-react'
+import { Package, CheckCircle2, ExternalLink, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -15,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Pagination } from '@/components/shared/Pagination'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
-import { marcarEntregado } from '@/actions/pedidos.actions'
+import { marcarEntregado, deletePedido } from '@/actions/pedidos.actions'
 import type { FiltroFaltantes } from '@/actions/faltantes.actions'
 
 // Tipo local para la fila de la tabla, incluye prioritaria y ruta además de PedidoConCliente
@@ -61,6 +62,8 @@ export function FaltantesTable({
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [confirmEntregarId, setConfirmEntregarId] = useState<string | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  const [deletePedidoId, setDeletePedidoId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Construye la URL preservando el filtro activo y la ruta
   function buildUrl(overrides: { filtro?: string; idRuta?: string; page?: string }) {
@@ -81,18 +84,22 @@ export function FaltantesTable({
   const paginationParams: Record<string, string> = { filtro: currentFiltro }
   if (idRuta) paginationParams.idRuta = idRuta
 
-  // Marcar un pedido como entregado con confirmación previa
   async function handleEntregado(id: string) {
     setConfirmLoading(true)
     const result = await marcarEntregado(id)
     setConfirmLoading(false)
     setConfirmEntregarId(null)
-    if (!result.success) {
-      toast.error(result.error)
-    } else {
-      toast.success('Pedido marcado como entregado')
-      router.refresh()
-    }
+    if (!result.success) toast.error(result.error)
+    else { toast.success('Pedido marcado como entregado'); router.refresh() }
+  }
+
+  async function handleDeletePedido(id: string) {
+    setDeleteLoading(true)
+    const result = await deletePedido(id)
+    setDeleteLoading(false)
+    setDeletePedidoId(null)
+    if (!result.success) toast.error(result.error)
+    else toast.success('Pedido eliminado')
   }
 
   // Determina si un pedido pendiente tiene fecha de entrega vencida
@@ -235,8 +242,8 @@ export function FaltantesTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      {!pedido.entregado && (
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        {!pedido.entregado && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -244,16 +251,24 @@ export function FaltantesTable({
                             onClick={() => setConfirmEntregarId(pedido.id_pedido)}
                             disabled={loadingId === pedido.id_pedido}
                           >
-                            {loadingId === pedido.id_pedido ? (
-                              <>Procesando...</>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="h-3 w-3" /> Entregar
-                              </>
-                            )}
+                            {loadingId === pedido.id_pedido ? <>Procesando...</> : <><CheckCircle2 className="h-3 w-3" /> Entregar</>}
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7"
+                          nativeButton={false}
+                          render={<Link href={`/pedidos/${pedido.id_pedido}`} />}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeletePedidoId(pedido.id_pedido)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -280,6 +295,17 @@ export function FaltantesTable({
         variant="default"
         onConfirm={() => { if (confirmEntregarId) handleEntregado(confirmEntregarId) }}
         loading={confirmLoading}
+      />
+
+      <ConfirmDialog
+        open={deletePedidoId !== null}
+        onOpenChange={(open) => { if (!open) setDeletePedidoId(null) }}
+        title="¿Eliminar pedido?"
+        description="Se eliminará el pedido completo, sus productos y pagos asociados. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar pedido"
+        variant="destructive"
+        onConfirm={() => { if (deletePedidoId) handleDeletePedido(deletePedidoId) }}
+        loading={deleteLoading}
       />
     </div>
   )
