@@ -218,11 +218,18 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
 
   function handleProductoChange(localId: string, idProducto: string) {
     const prod = productos.find(p => p.id_producto === idProducto)
-    setItems(prev => prev.map(i =>
-      i.localId === localId
-        ? { ...i, id_producto: idProducto, precio_unitario: prod?.precio_efectivo ?? 0 }
-        : i
-    ))
+    setItems(prev => prev.map(i => {
+      if (i.localId !== localId) return i
+      const base = prod?.precio_efectivo ?? 0
+      return { ...i, id_producto: idProducto, precio_unitario: base + (i.rebanado ? 500 : 0) }
+    }))
+  }
+
+  function handleRebanadoChange(localId: string, checked: boolean) {
+    setItems(prev => prev.map(i => {
+      if (i.localId !== localId) return i
+      return { ...i, rebanado: checked, precio_unitario: i.precio_unitario + (checked ? 500 : -500) }
+    }))
   }
 
   function canGoNext(): boolean {
@@ -538,7 +545,7 @@ export function NuevoPedidoSheet({ clientes, rutas }: NuevoPedidoSheetProps) {
 
                         <div className="flex items-center gap-6">
                           <div className="flex items-center gap-2">
-                            <Switch size="sm" checked={item.rebanado} onCheckedChange={(c) => updateItem(item.localId, 'rebanado', c)} />
+                            <Switch size="sm" checked={item.rebanado} onCheckedChange={(c) => handleRebanadoChange(item.localId, c)} />
                             <Label className="text-xs">Rebanado</Label>
                           </div>
                           <div className="flex items-center gap-2">
