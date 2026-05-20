@@ -183,7 +183,7 @@ export function EditarPedidoSheet({ idPedido, clientes, rutas, iconOnly = false 
     setItems(
       pedido.pedido_producto.map((pp) => ({
         localId: crypto.randomUUID(),
-        id_producto: pp.id_producto ?? '',
+        id_producto: (pp.producto as { id_producto?: string } | null)?.id_producto ?? '',
         cantidad: pp.cantidad ?? 1,
         rebanado: pp.rebanado ?? false,
         cuadrado: pp.cuadrado ?? false,
