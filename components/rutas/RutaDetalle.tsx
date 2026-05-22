@@ -69,7 +69,8 @@ export function RutaDetalle({
   totalIngresos,
 }: RutaDetalleProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [confirmEntregarId, setConfirmEntregarId] = useState<string | null>(null)
+  const [confirmEntregar, setConfirmEntregar] = useState<{ id: string; nombre: string } | null>(null)
+  const [confirmPagar, setConfirmPagar] = useState<{ id: string; nombre: string } | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
 
   const entregados = pedidos.filter(p => p.entregado).length
@@ -91,15 +92,16 @@ export function RutaDetalle({
     setConfirmLoading(true)
     const result = await marcarPedidoEntregado(idPedido, rutaId)
     setConfirmLoading(false)
-    setConfirmEntregarId(null)
+    setConfirmEntregar(null)
     if (!result.success) toast.error(result.error)
     else toast.success('Marcado como entregado')
   }
 
   async function handlePagado(idPedido: string) {
-    setLoadingId(idPedido + '_pago')
+    setConfirmLoading(true)
     const result = await marcarPedidoPagado(idPedido, rutaId)
-    setLoadingId(null)
+    setConfirmLoading(false)
+    setConfirmPagar(null)
     if (!result.success) toast.error(result.error)
     else toast.success('Marcado como pagado')
   }
@@ -279,8 +281,8 @@ export function RutaDetalle({
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs"
-                            onClick={() => setConfirmEntregarId(pedido.id_pedido)}
-                            disabled={confirmLoading && confirmEntregarId === pedido.id_pedido}
+                            onClick={() => setConfirmEntregar({ id: pedido.id_pedido, nombre: pedido.cliente?.nombre ?? 'Cliente desconocido' })}
+                            disabled={confirmLoading && confirmEntregar?.id === pedido.id_pedido}
                           >
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Entregar
@@ -291,8 +293,8 @@ export function RutaDetalle({
                           <Button
                             size="sm"
                             className="h-7 text-xs bg-green-600 hover:bg-green-700"
-                            onClick={() => handlePagado(pedido.id_pedido)}
-                            disabled={loadingId === pedido.id_pedido + '_pago'}
+                            onClick={() => setConfirmPagar({ id: pedido.id_pedido, nombre: pedido.cliente?.nombre ?? 'Cliente desconocido' })}
+                            disabled={confirmLoading && confirmPagar?.id === pedido.id_pedido}
                           >
                             <Wallet className="h-3 w-3 mr-1" />
                             Cobrar
@@ -368,13 +370,23 @@ export function RutaDetalle({
       </Tabs>
 
       <ConfirmDialog
-        open={confirmEntregarId !== null}
-        onOpenChange={(open) => { if (!open) setConfirmEntregarId(null) }}
+        open={confirmEntregar !== null}
+        onOpenChange={(open) => { if (!open) setConfirmEntregar(null) }}
         title="¿Marcar como entregado?"
-        description="Confirma que este pedido fue entregado al cliente."
+        description={`Confirma que el pedido de ${confirmEntregar?.nombre ?? ''} fue entregado.`}
         confirmLabel="Sí, entregado"
         variant="default"
-        onConfirm={() => { if (confirmEntregarId) handleEntregado(confirmEntregarId) }}
+        onConfirm={() => { if (confirmEntregar) handleEntregado(confirmEntregar.id) }}
+        loading={confirmLoading}
+      />
+      <ConfirmDialog
+        open={confirmPagar !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPagar(null) }}
+        title="¿Marcar como pagado?"
+        description={`Confirma que ${confirmPagar?.nombre ?? ''} pagó este pedido.`}
+        confirmLabel="Sí, pagado"
+        variant="default"
+        onConfirm={() => { if (confirmPagar) handlePagado(confirmPagar.id) }}
         loading={confirmLoading}
       />
     </div>
